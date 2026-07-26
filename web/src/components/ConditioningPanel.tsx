@@ -101,7 +101,7 @@ export function ConditioningPanel(props: {
   }
 
   return (
-    <section className="card col-span-full px-5 pb-5 pt-4 animate-rise [animation-delay:0.24s]">
+    <section className="card relative z-30 col-span-full px-5 pb-5 pt-4 animate-rise [animation-delay:0.24s]">
       <div className="mb-3.5 flex items-start gap-3">
         <div className="flex flex-col gap-2">
           <h2 className="m-0 text-lg font-semibold">

@@ -8,6 +8,7 @@ import {
 import clsx from "clsx";
 import { Button } from "./Button";
 import { ConditioningPanel } from "./ConditioningPanel";
+import { TranscriptionSettingsPanel } from "./TranscriptionSettingsPanel";
 import type { AppError } from "../App";
 
 const SERVER_DOWN = "The muscriptor server is temporarily unavailable.";
@@ -24,6 +25,10 @@ export function WelcomeScreen(props: {
   onUseExample: () => Promise<void>;
   condSelected: Set<string>;
   onCondChange: (next: Set<string>) => void;
+  sampling: boolean;
+  onSamplingChange: (value: boolean) => void;
+  temperature: number;
+  onTemperatureChange: (value: number) => void;
   onTranscribe: () => void;
   /** True while a file is dragged over the window; swaps the prompt in place. */
   dragging: boolean;
@@ -37,6 +42,10 @@ export function WelcomeScreen(props: {
     onUseExample,
     condSelected,
     onCondChange,
+    sampling,
+    onSamplingChange,
+    temperature,
+    onTemperatureChange,
     onTranscribe,
     dragging,
     error,
@@ -177,6 +186,12 @@ export function WelcomeScreen(props: {
       {error?.kind !== "server" && selectedFile !== null && (
         <>
           <ConditioningPanel selected={condSelected} onChange={onCondChange} />
+          <TranscriptionSettingsPanel
+            sampling={sampling}
+            onSamplingChange={onSamplingChange}
+            temperature={temperature}
+            onTemperatureChange={onTemperatureChange}
+          />
           <div className="flex justify-end">
             <Button kind="primary" size="text-base" pad="px-9 py-3" onClick={onTranscribe}>
               Transcribe

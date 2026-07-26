@@ -84,6 +84,8 @@ export function App() {
   const [stereo, setStereo] = useState(false);
   const [userScrolled, setUserScrolled] = useState(false);
   const [condSelected, setCondSelected] = useState<Set<string>>(loadConditioningSelection);
+  const [sampling, setSampling] = useState(false);
+  const [temperature, setTemperature] = useState(1.0);
   // True while a file is being dragged over the window. On the welcome screen
   // this swaps the panel's prompt in place instead of showing the overlay.
   const [dragging, setDragging] = useState(false);
@@ -93,6 +95,12 @@ export function App() {
   // re-creating `transcribe` whenever the selection changes.
   const condRef = useRef(condSelected);
   condRef.current = condSelected;
+
+  const samplingRef = useRef(sampling);
+  samplingRef.current = sampling;
+
+  const temperatureRef = useRef(temperature);
+  temperatureRef.current = temperature;
 
   useEffect(() => {
     window.localStorage.setItem(
@@ -109,6 +117,8 @@ export function App() {
     audio,
     rollRef,
     getConditioning: () => Array.from(condRef.current),
+    getSampling: () => samplingRef.current,
+    getTemperature: () => temperatureRef.current,
     progress,
     // A failed transcription bounces back to the welcome screen with a message.
     onError: (message) => {
@@ -131,6 +141,8 @@ export function App() {
     track("transcription_start", {
       instruments: Array.from(condSelected).sort().join(",") || "(none)",
       instrument_count: condSelected.size,
+      sampling,
+      temperature: sampling ? temperature : undefined,
       is_example: selectedFile.name === EXAMPLE.filename,
       file_type: (selectedFile.name.match(/\.([^./]+)$/)?.[1] ?? "unknown").toLowerCase(),
       file_size_mb: Math.round(selectedFile.size / 1e5) / 10,
@@ -362,6 +374,10 @@ export function App() {
           onUseExample={useExample}
           condSelected={condSelected}
           onCondChange={setCondSelected}
+          sampling={sampling}
+          onSamplingChange={setSampling}
+          temperature={temperature}
+          onTemperatureChange={setTemperature}
           onTranscribe={startTranscription}
           dragging={dragging}
           error={error}

@@ -45,6 +45,10 @@ export interface TranscriptionDeps {
   rollRef: RefObject<PianoRoll | null>;
   /** Conditioning instruments selected in the UI, read at submit time. */
   getConditioning: () => string[];
+  /** Whether to use temperature sampling instead of greedy decoding. */
+  getSampling: () => boolean;
+  /** Sampling temperature, used only when sampling is enabled. */
+  getTemperature: () => number;
   /** Smooths chunk-completion anchors into a live progress fraction + ETA. */
   progress: ProgressEstimator;
   /** Called when a (non-superseded) transcription fails, so the UI can recover.
@@ -75,6 +79,8 @@ export function useTranscription(deps: TranscriptionDeps) {
     audio,
     rollRef,
     getConditioning,
+    getSampling,
+    getTemperature,
     progress,
     onError,
     setAppState,
@@ -188,7 +194,11 @@ export function useTranscription(deps: TranscriptionDeps) {
     let noteCount = 0;
     try {
       const cond = getConditioning();
-      const extra = cond.length > 0 ? { instruments: cond } : undefined;
+      const extra: Record<string, string | string[]> = {
+        sampling: String(getSampling()),
+        temperature: String(getTemperature()),
+      };
+      if (cond.length > 0) extra.instruments = cond;
       for await (const raw of streamTranscribe(
         "/transcribe",
         file,
