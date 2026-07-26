@@ -1,0 +1,18 @@
+﻿# Frontend
+node_modules/
+dist/
+
+# Python
+.venv/
+__pycache__/
+*.py[cod]
+
+# Local configuration
+.env
+.env.*
+
+# Editors and operating systems
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
