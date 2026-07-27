@@ -86,6 +86,7 @@ export class AudioEngine {
   private wavPanner: StereoPannerNode;
   private midiPanner: StereoPannerNode;
   private mutedInstruments = new Set<string>();
+  private instrumentVolumes = new Map<string, number>();
   private mix = 0.75; // 0 = full WAV, 1 = full MIDI
   /** When true: original audio hard-left, synthesis hard-right (mix ignored). */
   private stereo = false;
@@ -208,6 +209,10 @@ export class AudioEngine {
       while (ch >= synth.channelCount) synth.addNewChannel();
       synth.programChange(ch, GM_PROGRAM[instrument] ?? 0);
     }
+    synth.midiChannels[ch]?.setSystemParameter(
+      "gain",
+      this.instrumentVolumes.get(instrument) ?? 1,
+    );
     if (this.mutedInstruments.has(instrument)) {
       synth.midiChannels[ch]?.setSystemParameter("isMuted", true);
     }
@@ -267,6 +272,16 @@ export class AudioEngine {
     const ch = this.channels.get(instrument);
     if (ch !== undefined) {
       this.synth?.midiChannels[ch]?.setSystemParameter("isMuted", muted);
+    }
+  }
+
+  /** Set one instrument's MIDI playback level. 1 is the normal volume. */
+  setInstrumentVolume(instrument: string, volume: number) {
+    const level = Math.max(0, Math.min(1, volume));
+    this.instrumentVolumes.set(instrument, level);
+    const ch = this.channels.get(instrument);
+    if (ch !== undefined) {
+      this.synth?.midiChannels[ch]?.setSystemParameter("gain", level);
     }
   }
 
@@ -387,10 +402,12 @@ export class AudioEngine {
     this.autoStopAt = null;
     this.stopWavSource();
     this.wavBuffer = null;
-    // The instrument list is rebuilt from scratch, so unmute everything.
+    // The instrument list is rebuilt from scratch, so reset its mixer state.
     this.mutedInstruments.clear();
+    this.instrumentVolumes.clear();
     for (const ch of this.channels.values()) {
       this.synth?.midiChannels[ch]?.setSystemParameter("isMuted", false);
+      this.synth?.midiChannels[ch]?.setSystemParameter("gain", 1);
     }
   }
 

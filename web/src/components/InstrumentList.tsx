@@ -40,69 +40,103 @@ function UndetectedRow(props: { name: string }) {
   );
 }
 
-/** An interactive detected instrument with mute + solo controls. */
+/** An interactive detected instrument with volume, mute, and solo controls. */
 function InstrumentRow(props: {
   name: string;
   muted: boolean;
   soloed: boolean;
+  volume: number;
   onToggleMute: () => void;
   onToggleSolo: () => void;
+  onVolumeChange: (volume: number) => void;
   /** Hovering the row spotlights this instrument's notes on the piano roll. */
   onHover: (name: string | null) => void;
 }) {
-  const { name, muted, soloed, onToggleMute, onToggleSolo, onHover } = props;
+  const {
+    name,
+    muted,
+    soloed,
+    volume,
+    onToggleMute,
+    onToggleSolo,
+    onVolumeChange,
+    onHover,
+  } = props;
+
   return (
     <li
-      className="group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-muted transition-colors duration-150 ease-fluid hover:bg-white/[0.04] hover:text-content [animation:rise_0.4s_var(--ease-fluid)_both]"
+      className="group rounded-lg px-2.5 py-2 text-muted transition-colors duration-150 ease-fluid hover:bg-white/[0.04] hover:text-content [animation:rise_0.4s_var(--ease-fluid)_both]"
       onMouseEnter={() => onHover(name)}
       onMouseLeave={() => onHover(null)}
     >
-      <div
-        className={clsx(
-          "flex min-w-0 flex-1 items-center gap-2.5 transition-opacity duration-150 ease-fluid",
-          muted && "opacity-10",
-        )}
-      >
-        <span
-          className="size-3 shrink-0 rounded-sm shadow-glow"
-          style={{ background: instrumentColor(name) }}
+      <div className="flex items-center gap-2.5">
+        <div
+          className={clsx(
+            "flex min-w-0 flex-1 items-center gap-2.5 transition-opacity duration-150 ease-fluid",
+            muted && "opacity-10",
+          )}
+        >
+          <span
+            className="size-3 shrink-0 rounded-sm shadow-glow"
+            style={{ background: instrumentColor(name) }}
+          />
+          <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+            {label(name)}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-0.5">
+          <Button
+            type="button"
+            kind="ghost"
+            className={clsx(
+              "-my-1 flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold transition-[opacity,background,color] duration-150 ease-fluid hover:bg-white/[0.08]",
+              soloed
+                ? "text-accent-2 opacity-100"
+                : "text-muted opacity-70 group-hover:opacity-100 hover:text-content",
+            )}
+            title={soloed ? "Unsolo" : "Solo (mute everything else)"}
+            aria-pressed={soloed}
+            onClick={onToggleSolo}
+          >
+            S
+          </Button>
+
+          <Button
+            type="button"
+            kind="ghost"
+            className={clsx(
+              "-my-1 flex size-6 shrink-0 items-center justify-center rounded-md transition-[opacity,background,color] duration-150 ease-fluid hover:bg-white/[0.08]",
+              muted
+                ? "text-red opacity-100"
+                : "text-muted opacity-70 group-hover:opacity-100 hover:text-content",
+            )}
+            title={muted ? "Unmute on MIDI track" : "Mute on MIDI track"}
+            aria-pressed={muted}
+            onClick={onToggleMute}
+          >
+            {muted ? <IconSoundOff /> : <IconSound />}
+          </Button>
+        </div>
+      </div>
+
+      <label className="mt-2 flex items-center gap-2 pl-5 text-xs text-faint">
+        <span>Volume</span>
+        <input
+          className="mix-slider min-w-0 flex-1"
+          type="range"
+          min="0"
+          max="1"
+          step="0.01"
+          value={volume}
+          aria-label={`${label(name)} volume`}
+          onChange={(event) => onVolumeChange(event.target.valueAsNumber)}
+          onPointerUp={(event) => event.currentTarget.blur()}
         />
-        <span className="min-w-0 flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
-          {label(name)}
+        <span className="w-9 text-right font-mono tabular-nums">
+          {Math.round(volume * 100)}%
         </span>
-      </div>
-      <div className="flex items-center gap-0.5">
-        <Button
-          type="button"
-          kind="ghost"
-          className={clsx(
-            "-my-1 flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold transition-[opacity,background,color] duration-150 ease-fluid hover:bg-white/[0.08]",
-            soloed
-              ? "text-accent-2 opacity-100"
-              : "text-muted opacity-70 group-hover:opacity-100 hover:text-content",
-          )}
-          title={soloed ? "Unsolo" : "Solo (mute everything else)"}
-          aria-pressed={soloed}
-          onClick={onToggleSolo}
-        >
-          S
-        </Button>
-        <Button
-          type="button"
-          kind="ghost"
-          className={clsx(
-            "-my-1 flex size-6 shrink-0 items-center justify-center rounded-md transition-[opacity,background,color] duration-150 ease-fluid hover:bg-white/[0.08]",
-            muted
-              ? "text-red opacity-100"
-              : "text-muted opacity-70 group-hover:opacity-100 hover:text-content",
-          )}
-          title={muted ? "Unmute on MIDI track" : "Mute on MIDI track"}
-          aria-pressed={muted}
-          onClick={onToggleMute}
-        >
-          {muted ? <IconSoundOff /> : <IconSound />}
-        </Button>
-      </div>
+      </label>
     </li>
   );
 }
@@ -116,6 +150,7 @@ export function InstrumentList(props: {
   const { instruments, given, audio, rollRef } = props;
   const [muted, setMuted] = useState<Set<string>>(() => new Set());
   const [soloed, setSoloed] = useState<string | null>(null);
+  const [volumes, setVolumes] = useState<Record<string, number>>({});
 
   // Keep the audio engine and piano roll in sync with the muted set.
   useEffect(() => {
@@ -151,8 +186,13 @@ export function InstrumentList(props: {
       name={name}
       muted={muted.has(name)}
       soloed={soloed === name}
+      volume={volumes[name] ?? 1}
       onToggleMute={() => toggleMute(name)}
       onToggleSolo={() => toggleSolo(name)}
+      onVolumeChange={(volume) => {
+        setVolumes((previous) => ({ ...previous, [name]: volume }));
+        audio.setInstrumentVolume(name, volume);
+      }}
       onHover={(n) => rollRef.current?.setHighlightedInstrument(n)}
     />
   );
